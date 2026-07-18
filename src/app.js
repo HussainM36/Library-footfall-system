@@ -7,6 +7,8 @@ import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/error.middleware.js';
 import { HTTP_STATUS } from './constants/index.js';
 import { sendError } from './utils/response.js';
+import visitRoutes from './routes/visit.routes.js';
+import userRoutes from './routes/user.routes.js';
 import authRoutes from './routes/auth.routes.js';
 const app = express();
 
@@ -25,7 +27,8 @@ app.get('/health', (req, res) => {
 
 // Mount Authentication Module Routes
 app.use('/api/auth', authRoutes);
-
+app.use('/api/visits', visitRoutes);
+app.use('/api/users', userRoutes);
 // 3. Fallback Route for Undefined Paths (404)
 app.use((req, res, next) => {
   const error = new Error(`Route not found - ${req.originalUrl}`);
