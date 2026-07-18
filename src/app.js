@@ -7,7 +7,7 @@ import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/error.middleware.js';
 import { HTTP_STATUS } from './constants/index.js';
 import { sendError } from './utils/response.js';
-
+import authRoutes from './routes/auth.routes.js';
 const app = express();
 
 // 1. Global Middlewares
@@ -22,6 +22,9 @@ app.use(cookieParser()); // Parse cookie headers
 app.get('/health', (req, res) => {
   res.status(HTTP_STATUS.OK).json({ status: 'UP', timestamp: new Date() });
 });
+
+// Mount Authentication Module Routes
+app.use('/api/auth', authRoutes);
 
 // 3. Fallback Route for Undefined Paths (404)
 app.use((req, res, next) => {
