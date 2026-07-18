@@ -1,28 +1,36 @@
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
-import cookieParser from "cookie-parser";
+// src/app.js
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
+import { errorHandler } from './middleware/error.middleware.js';
+import { HTTP_STATUS } from './constants/index.js';
+import { sendError } from './utils/response.js';
 
 const app = express();
 
-app.use(cors());
+// 1. Global Middlewares
+app.use(helmet()); // Secure HTTP headers
+app.use(cors({ origin: '*', credentials: true })); // Handle CORS (Adjust for production later)
+app.use(morgan('dev')); // HTTP request logging
+app.use(express.json()); // JSON parsing
+app.use(express.urlencoded({ extended: true })); // URL encoded parsing
+app.use(cookieParser()); // Parse cookie headers
 
-app.use(helmet());
-
-app.use(morgan("dev"));
-
-app.use(express.json());
-
-app.use(express.urlencoded({ extended: true }));
-
-app.use(cookieParser());
-
-app.get("/", (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: "Library Footfall Tracking Backend Running"
-    });
+// 2. Base Health Check Route
+app.get('/health', (req, res) => {
+  res.status(HTTP_STATUS.OK).json({ status: 'UP', timestamp: new Date() });
 });
+
+// 3. Fallback Route for Undefined Paths (404)
+app.use((req, res, next) => {
+  const error = new Error(`Route not found - ${req.originalUrl}`);
+  error.statusCode = HTTP_STATUS.NOT_FOUND;
+  next(error);
+});
+
+// 4. Centralized Error Handling Middleware
+app.use(errorHandler);
 
 export default app;
