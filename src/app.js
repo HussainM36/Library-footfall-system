@@ -4,41 +4,55 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import { errorHandler } from './middleware/error.middleware.js';
+import dotenv from 'dotenv'; // Added missing import to prevent application crash
+
+// Import Global Error Utilities & Constants
+import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { HTTP_STATUS } from './constants/index.js';
-import { sendError } from './utils/response.js';
+
+// Import Route Handlers
+import authRoutes from './routes/auth.routes.js';
 import visitRoutes from './routes/visit.routes.js';
 import userRoutes from './routes/user.routes.js';
 import reportRoutes from './routes/report.routes.js';
-import authRoutes from './routes/auth.routes.js';
+
+// Initialize environment configuration parameters
+dotenv.config();
+
 const app = express();
 
+// ==========================================
 // 1. Global Middlewares
+// ==========================================
 app.use(helmet()); // Secure HTTP headers
-app.use(cors({ origin: '*', credentials: true })); // Handle CORS (Adjust for production later)
+app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true })); // Cross-Origin configuration
 app.use(morgan('dev')); // HTTP request logging
-app.use(express.json()); // JSON parsing
-app.use(express.urlencoded({ extended: true })); // URL encoded parsing
-app.use(cookieParser()); // Parse cookie headers
+app.use(express.json()); // JSON body parsing
+app.use(express.urlencoded({ extended: true })); // URL encoded payload parsing
+app.use(cookieParser()); // Parse signed/unsigned cookie headers
 
+// ==========================================
 // 2. Base Health Check Route
+// ==========================================
 app.get('/health', (req, res) => {
   res.status(HTTP_STATUS.OK).json({ status: 'UP', timestamp: new Date() });
 });
 
-// Mount Authentication Module Routes
+// ==========================================
+// 3. API Route Registrations
+// ==========================================
 app.use('/api/auth', authRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
-// 3. Fallback Route for Undefined Paths (404)
-app.use((req, res, next) => {
-  const error = new Error(`Route not found - ${req.originalUrl}`);
-  error.statusCode = HTTP_STATUS.NOT_FOUND;
-  next(error);
-});
 
-// 4. Centralized Error Handling Middleware
+// ==========================================
+// 4. Fallback & Exception Middleware Handling
+// ==========================================
+// Handle dead route requests via your custom middleware handler
+app.use(notFoundHandler);
+
+// Centralized error interceptor handling (Must remain as the absolute final route declaration)
 app.use(errorHandler);
 
 export default app;
