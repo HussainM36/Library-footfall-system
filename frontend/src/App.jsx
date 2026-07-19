@@ -4,21 +4,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
+import { ScanDesk } from './pages/ScanDesk'; // Imported our live scanning terminal view!
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './index.css';
 
-// Persistent Workspace Subview Mock Components for Phase 10 Structure Verification
 const DashboardMock = () => (
   <div style={cardStyle}>
     <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>Dashboard Overview Ledger</h2>
     <p style={{ color: '#64748b' }}>Real-time usage metrics and operational system diagnostics appear here.</p>
-  </div>
-);
-
-const ScanMock = () => (
-  <div style={cardStyle}>
-    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>High-Speed Scanning Desk</h2>
-    <p style={{ color: '#64748b' }}>Operational scanner listener interface intercepts check-in entries here.</p>
   </div>
 );
 
@@ -36,34 +29,25 @@ const AnalyticsMock = () => (
   </div>
 );
 
-const cardStyle = { 
-  backgroundColor: '#ffffff', 
-  padding: '24px', 
-  borderRadius: '8px', 
-  boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
-  border: '1px solid #e2e8f0' 
-};
+const cardStyle = { backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Public Authentication Path (Swapped mock login out for real operational view) */}
           <Route path="/login" element={<Login />} />
 
-          {/* Secure Protected Paths Container Firewall */}
           <Route element={<ProtectedRoute />}>
-            {/* Wrapped inside the global Left-Sidebar Layout panel */}
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardMock />} />
-              <Route path="/scan" element={<ScanMock />} />
+              {/* Linked the live ScanDesk module route right here */}
+              <Route path="/scan" element={<ScanDesk />} />
               <Route path="/users" element={<UsersMock />} />
               <Route path="/analytics" element={<AnalyticsMock />} />
             </Route>
           </Route>
 
-          {/* Fallback Missing URL Traffic Catch */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>

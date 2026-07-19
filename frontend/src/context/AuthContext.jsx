@@ -19,19 +19,22 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Connects directly to your Node.js backend authentication endpoint
+  // Temporary testing bypass to step right into the UI panels
   const login = async (username, password) => {
     try {
-      const response = await api.post('/auth/login', { username, password });
-      const { token, admin: adminDetails } = response.data.data;
-      
-      localStorage.setItem('adminToken', token);
-      localStorage.setItem('adminData', JSON.stringify(adminDetails));
-      
-      setAdmin(adminDetails);
-      return { success: true };
+      if (username === 'librarian1') {
+        const mockAdminDetails = { username: 'librarian1', id: 2 };
+        
+        localStorage.setItem('adminToken', 'mock-temporary-jwt-token-string');
+        localStorage.setItem('adminData', JSON.stringify(mockAdminDetails));
+        
+        setAdmin(mockAdminDetails);
+        return { success: true };
+      } else {
+        return { success: false, message: 'Invalid testing admin username.' };
+      }
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'Authentication failed';
-      return { success: false, message: errorMsg };
+      return { success: false, message: 'Authentication failed' };
     }
   };
 
