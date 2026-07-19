@@ -1,7 +1,7 @@
 // frontend/src/pages/UserRegistry.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { Search, Filter, User, ShieldCheck, ShieldAlert, RefreshCw, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X } from 'lucide-react';
 
 export const UserRegistry = () => {
   const [users, setUsers] = useState([]);
@@ -14,7 +14,17 @@ export const UserRegistry = () => {
   const [currentEditUser, setCurrentEditUser] = useState(null); // If populated, app is in "Edit Mode"
   
   // Managed Input Buffers
-  const [formData, setFormData] = useState({ membership_no: '', full_name: '', department: '', batch: '', designation: 'Student', is_active: true });
+  const [formData, setFormData] = useState({ 
+    membership_no: '', 
+    full_name: '', 
+    department: 'B.Ed.', 
+    batch: '', 
+    designation: 'Sudent', 
+    status: 'Active' 
+  });
+
+  // Strict Department Dropdown Domain — Now featuring ILL!
+  const ALLOWED_DEPARTMENTS = ['B.Ed.', 'D.Ed.', 'ILL'];
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -22,21 +32,20 @@ export const UserRegistry = () => {
       const response = await api.get('/users');
       setUsers(response.data?.data || response.data || []);
     } catch (error) {
-      console.error('Failed to resolve records:', error);
-      setUsers([
-        { membership_no: '2526029', full_name: 'Nadar Riya Renita', department: 'Computer Engineering', batch: '2026', designation: 'Student', is_active: true },
-        { membership_no: '2526045', full_name: 'Shetty Divya', department: 'Information Technology', batch: '2026', designation: 'Student', is_active: true }
-      ]);
+      console.error('Failed to resolve database user records:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { 
+    fetchUsers(); 
+  }, []);
 
   const handleOpenCreate = () => {
     setCurrentEditUser(null);
-    setFormData({ membership_no: '', full_name: '', department: '', batch: '', designation: 'Student', is_active: true });
+    setFormData({ membership_no: '', full_name: '', department: 'B.Ed.', batch: '', designation: 'Sudent', status: 'Active' });
     setShowModal(true);
   };
 
@@ -50,42 +59,56 @@ export const UserRegistry = () => {
     e.preventDefault();
     try {
       if (currentEditUser) {
-        // UPDATE Operation
         await api.put(`/users/${formData.membership_no}`, formData);
-        setUsers(users.map(u => u.membership_no === formData.membership_no ? formData : u));
       } else {
-        // CREATE Operation
         await api.post('/users', formData);
-        setUsers([...users, formData]);
       }
       setShowModal(false);
+      fetchUsers();
     } catch (err) {
-      console.error("CRUD persistence error:", err);
-      // Local fallback simulator updates for testing
-      if (currentEditUser) {
-        setUsers(users.map(u => u.membership_no === formData.membership_no ? formData : u));
-      } else {
-        setUsers([...users, formData]);
-      }
+      console.error("CRUD database network transaction error:", err);
       setShowModal(false);
     }
   };
 
   const handleDelete = async (membershipNo) => {
-    if (!window.confirm("Are you sure you want to completely delete this student account record?")) return;
+    if (!window.confirm("Are you sure you want to completely delete this user record from the database?")) return;
     try {
       await api.delete(`/users/${membershipNo}`);
-      setUsers(users.filter(u => u.membership_no !== membershipNo));
+      fetchUsers();
     } catch (err) {
-      setUsers(users.filter(u => u.membership_no !== membershipNo));
+      console.error("Failed to delete user record:", err);
     }
   };
 
-  const departments = ['All', ...new Set(users.map(u => u.department).filter(Boolean))];
+  // Bulletproof Normalization Filter matching string keys accurately
   const filteredUsers = users.filter(user => {
-    return (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || user.membership_no?.includes(searchQuery)) &&
-           (selectedDept === 'All' || user.department === selectedDept);
+    const matchesSearch = 
+      user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      user.membership_no?.toString().includes(searchQuery);
+    
+    if (selectedDept === 'All') return matchesSearch;
+
+    // Normalizes strings by removing spaces/trailing dots so "D.Ed.", "D.Ed", and "d.ed" match identically
+    const cleanUserDept = user.department?.replace(/[\s.]/g, '').toLowerCase();
+    const cleanSelectedDept = selectedDept.replace(/[\s.]/g, '').toLowerCase();
+    
+    return matchesSearch && (cleanUserDept === cleanSelectedDept);
   });
+
+  const getDesignationStyle = (role) => {
+    const normRole = role?.trim();
+    if (normRole === 'Student' || normRole === 'Sudent') {
+      return { color: '#0f172a', backgroundColor: '#e2e8f0', label: 'Student' };
+    }
+    if (normRole === 'Faculty') {
+      return { color: '#0052cc', backgroundColor: '#e0eefe', label: 'Faculty' };
+    }
+    if (normRole === 'Staff') {
+      return { color: '#475569', backgroundColor: '#f1f5f9', label: 'Staff' };
+    }
+    return { color: '#0f172a', backgroundColor: '#e2e8f0', label: role || 'Student' };
+  };
 
   return (
     <div>
@@ -102,10 +125,19 @@ export const UserRegistry = () => {
       <div style={styles.commandRow}>
         <div style={styles.searchWrapper}>
           <Search size={18} style={styles.searchIcon} />
-          <input type="text" placeholder="Search accounts directory..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={styles.searchInput} />
+          <input 
+            type="text" 
+            placeholder="Search accounts directory..." 
+            value={searchQuery} 
+            onChange={(e) => setSearchQuery(e.target.value)} 
+            style={styles.searchInput} 
+          />
         </div>
+        
+        {/* Dropdown containing B.Ed., D.Ed., and ILL fields */}
         <select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)} style={styles.selectInput}>
-          {departments.map((d, i) => <option key={i} value={d}>{d}</option>)}
+          <option value="All">All Departments</option>
+          {ALLOWED_DEPARTMENTS.map((d, i) => <option key={i} value={d}>{d}</option>)}
         </select>
       </div>
 
@@ -122,23 +154,52 @@ export const UserRegistry = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user, idx) => (
-              <tr key={idx} style={styles.tr}>
-                <td style={styles.td}><strong>{user.full_name}</strong></td>
-                <td style={styles.td}><code>#{user.membership_no}</code></td>
-                <td style={styles.td}>{user.department}</td>
-                <td style={styles.td}>{user.batch}</td>
-                <td style={styles.td}>
-                  <span style={{ color: user.is_active ? '#065f46' : '#991b1b', backgroundColor: user.is_active ? '#ecfdf5' : '#fef2f2', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>
-                    {user.is_active ? 'Active' : 'Suspended'}
-                  </span>
-                </td>
-                <td style={{ ...styles.td, textAlign: 'center' }}>
-                  <button onClick={() => handleOpenEdit(user)} style={styles.editBtn}><Edit2 size={13} /></button>
-                  <button onClick={() => handleDelete(user.membership_no)} style={styles.deleteBtn}><Trash2 size={13} /></button>
-                </td>
+            {loading ? (
+              <tr>
+                <td colSpan="6" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>Fetching live database records...</td>
               </tr>
-            ))}
+            ) : filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>No verified staff, faculty, or student entries match your search criteria.</td>
+              </tr>
+            ) : (
+              filteredUsers.map((user, idx) => {
+                const badgeInfo = getDesignationStyle(user.designation);
+                const isActive = user.status === 'Active' || user.status === 'active';
+                
+                return (
+                  <tr key={idx} style={styles.tr}>
+                    <td style={styles.td}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <strong style={{ color: '#1e293b' }}>{user.full_name}</strong>
+                        <span style={{ ...styles.roleBadge, color: badgeInfo.color, backgroundColor: badgeInfo.backgroundColor }}>
+                          {badgeInfo.label}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={styles.td}><code>#{user.membership_no}</code></td>
+                    <td style={styles.td}>{user.department}</td>
+                    <td style={styles.td}>{user.batch || 'N/A'}</td>
+                    <td style={styles.td}>
+                      <span style={{ 
+                        color: isActive ? '#065f46' : '#991b1b', 
+                        backgroundColor: isActive ? '#ecfdf5' : '#fef2f2', 
+                        padding: '4px 10px', 
+                        borderRadius: '12px', 
+                        fontSize: '12px', 
+                        fontWeight: '600' 
+                      }}>
+                        {isActive ? 'Active' : 'Suspended'}
+                      </span>
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                      <button onClick={() => handleOpenEdit(user)} style={styles.editBtn}><Edit2 size={13} /></button>
+                      <button onClick={() => handleDelete(user.membership_no)} style={styles.deleteBtn}><Trash2 size={13} /></button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -148,31 +209,47 @@ export const UserRegistry = () => {
         <div style={styles.modalOverlay}>
           <div style={styles.modalBody}>
             <div style={styles.modalHeader}>
-              <h3>{currentEditUser ? 'Modify Member Profile' : 'Register New Member Record'}</h3>
-              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}><X size={20} /></button>
+              <h3 style={{ fontWeight: '700', color: '#1e293b' }}>{currentEditUser ? 'Modify Account Details' : 'Register New User Entry'}</h3>
+              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit} style={styles.form}>
               <div style={styles.formGroup}>
-                <label>Membership Number</label>
+                <label style={styles.label}>Membership Card Number</label>
                 <input type="text" value={formData.membership_no} disabled={!!currentEditUser} onChange={(e) => setFormData({ ...formData, membership_no: e.target.value })} required style={styles.input} />
               </div>
               <div style={styles.formGroup}>
-                <label>Full Name</label>
+                <label style={styles.label}>Full Name</label>
                 <input type="text" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} required style={styles.input} />
               </div>
+              
               <div style={styles.formGroup}>
-                <label>Department</label>
-                <input type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} required style={styles.input} />
+                <label style={styles.label}>System Designation / Role</label>
+                <select value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} style={styles.input}>
+                  <option value="Sudent">Student</option>
+                  <option value="Faculty">Faculty Member</option>
+                  <option value="Staff">Administrative Staff</option>
+                </select>
               </div>
+
               <div style={styles.formGroup}>
-                <label>Graduation Year/Batch</label>
-                <input type="text" value={formData.batch} onChange={(e) => setFormData({ ...formData, batch: e.target.value })} required style={styles.input} />
+                <label style={styles.label}>Department Track</label>
+                <select value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} style={styles.input}>
+                  {ALLOWED_DEPARTMENTS.map((dept, idx) => (
+                    <option key={idx} value={dept}>{dept}</option>
+                  ))}
+                </select>
               </div>
+
               <div style={styles.formGroup}>
-                <label>Terminal Clearance Status</label>
-                <select value={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'true' })} style={styles.input}>
-                  <option value="true">Active / Cleared</option>
-                  <option value="false">Suspended / Flagged</option>
+                <label style={styles.label}>Academic Batch / Year (e.g., 2025-27)</label>
+                <input type="text" value={formData.batch} placeholder="e.g., 2025-27 or N/A" onChange={(e) => setFormData({ ...formData, batch: e.target.value })} required style={styles.input} />
+              </div>
+              
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Terminal Status</label>
+                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} style={styles.input}>
+                  <option value="Active">Active</option>
+                  <option value="Suspended">Suspended</option>
                 </select>
               </div>
               <button type="submit" style={styles.submitBtn}>Save Configuration</button>
@@ -192,21 +269,23 @@ const styles = {
   commandRow: { display: 'flex', gap: '16px', marginBottom: '20px' },
   searchWrapper: { position: 'relative', flex: 1 },
   searchIcon: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
-  searchInput: { width: '100%', padding: '10px 12px 10px 40px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' },
-  selectInput: { padding: '10px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', minWidth: '180px' },
+  searchInput: { width: '100%', padding: '10px 12px 10px 40px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px' },
+  selectInput: { padding: '10px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', minWidth: '180px', fontSize: '14px', cursor: 'pointer' },
   tableCard: { backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
   thRow: { backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
   th: { padding: '14px 16px', fontSize: '13px', color: '#475569', fontWeight: '600' },
   tr: { borderBottom: '1px solid #f1f5f9' },
-  td: { padding: '14px 16px', fontSize: '14px', color: '#334155' },
+  td: { padding: '14px 16px', fontSize: '14px', color: '#334155', verticalAlign: 'middle' },
+  roleBadge: { display: 'inline-block', alignSelf: 'flex-start', fontSize: '11px', fontWeight: '700', padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase', marginTop: '2px' },
   editBtn: { border: '1px solid #cbd5e1', background: '#ffffff', padding: '6px', borderRadius: '4px', cursor: 'pointer', marginRight: '6px', color: '#0052cc' },
   deleteBtn: { border: '1px solid #fecaca', background: '#ffffff', padding: '6px', borderRadius: '4px', cursor: 'pointer', color: '#dc2626' },
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(1px)' },
   modalBody: { backgroundColor: '#ffffff', borderRadius: '8px', padding: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' },
   form: { display: 'flex', flexDirection: 'column', gap: '14px' },
-  formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  input: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' },
-  submitBtn: { backgroundColor: '#0052cc', color: '#ffffff', border: 'none', padding: '12px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', marginTop: '10px' }
+  formGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
+  label: { fontSize: '13px', fontWeight: '600', color: '#475569' },
+  input: { padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px' },
+  submitBtn: { backgroundColor: '#0052cc', color: '#ffffff', border: 'none', padding: '12px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', marginTop: '10px', fontSize: '14px' }
 };
