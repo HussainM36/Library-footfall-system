@@ -2,42 +2,65 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { Layout } from './components/Layout';
+import { Login } from './pages/Login';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './index.css';
 
-// Styled Login Screen Mock Blueprint
-const MockLogin = () => (
-  <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f2f5' }}>
-    <div style={{ backgroundColor: '#ffffff', padding: '40px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', width: '380px', textAlign: 'center' }}>
-      <h2 style={{ marginBottom: '16px', color: '#1a1a1a', fontSize: '24px', fontWeight: '600' }}>Admin Login Portal</h2>
-      <p style={{ color: '#666666', fontSize: '14px', lineHeight: '1.5' }}>(Phase 10 Form UI will be coded right inside this card block)</p>
-    </div>
+// Persistent Workspace Subview Mock Components for Phase 10 Structure Verification
+const DashboardMock = () => (
+  <div style={cardStyle}>
+    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>Dashboard Overview Ledger</h2>
+    <p style={{ color: '#64748b' }}>Real-time usage metrics and operational system diagnostics appear here.</p>
   </div>
 );
 
-// Styled Private Dashboard Canvas Mock Blueprint
-const MockDashboard = () => (
-  <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-    <div style={{ backgroundColor: '#ffffff', padding: '32px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <h1 style={{ color: '#1a1a1a', marginBottom: '12px', fontSize: '28px' }}>Protected Dashboard</h1>
-      <p style={{ color: '#2e7d32', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        ✓ Phase 9 Security Verification Passed Successfully.
-      </p>
-    </div>
+const ScanMock = () => (
+  <div style={cardStyle}>
+    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>High-Speed Scanning Desk</h2>
+    <p style={{ color: '#64748b' }}>Operational scanner listener interface intercepts check-in entries here.</p>
   </div>
 );
+
+const UsersMock = () => (
+  <div style={cardStyle}>
+    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>Student Accounts Registry</h2>
+    <p style={{ color: '#64748b' }}>Search logs, system records, and directory details here.</p>
+  </div>
+);
+
+const AnalyticsMock = () => (
+  <div style={cardStyle}>
+    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>Analytical Graph Models</h2>
+    <p style={{ color: '#64748b' }}>Hourly traffic calculations and reports populate here.</p>
+  </div>
+);
+
+const cardStyle = { 
+  backgroundColor: '#ffffff', 
+  padding: '24px', 
+  borderRadius: '8px', 
+  boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
+  border: '1px solid #e2e8f0' 
+};
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Public Authentication Path */}
-          <Route path="/login" element={<MockLogin />} />
+          {/* Public Authentication Path (Swapped mock login out for real operational view) */}
+          <Route path="/login" element={<Login />} />
 
-          {/* Secure Protected Paths Container Wrapper */}
+          {/* Secure Protected Paths Container Firewall */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<MockDashboard />} />
+            {/* Wrapped inside the global Left-Sidebar Layout panel */}
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<DashboardMock />} />
+              <Route path="/scan" element={<ScanMock />} />
+              <Route path="/users" element={<UsersMock />} />
+              <Route path="/analytics" element={<AnalyticsMock />} />
+            </Route>
           </Route>
 
           {/* Fallback Missing URL Traffic Catch */}
