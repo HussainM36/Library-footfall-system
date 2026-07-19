@@ -1,54 +1,79 @@
 // frontend/src/App.jsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { Layout } from './components/Layout';
-import { Login } from './pages/Login';
-import { ScanDesk } from './pages/ScanDesk'; // Imported our live scanning terminal view!
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+
+// Layout & Core Feature Pages Imports
+import { AdminLayout } from './layouts/AdminLayout';
+import { PublicKioskLayout } from './layouts/PublicKioskLayout';
+import { Login } from './pages/Login';
+import { ScanDesk } from './pages/ScanDesk';
+import { UserRegistry } from './pages/UserRegistry';
+import { AnalyticsPanels } from './pages/AnalyticsPanels';
+import { DashboardHome } from './pages/DashboardHome';
+
 import './index.css';
 
-const DashboardMock = () => (
-  <div style={cardStyle}>
-    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>Dashboard Overview Ledger</h2>
-    <p style={{ color: '#64748b' }}>Real-time usage metrics and operational system diagnostics appear here.</p>
-  </div>
-);
+// Context helper wrapper to pass auth logging callbacks to the AdminLayout
+const AdminLayoutWrapper = () => {
+  const { logout } = useAuth(); // Grabs the logout handler from your global AuthContext
+  const navigate = useNavigate();
 
-const UsersMock = () => (
-  <div style={cardStyle}>
-    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>Student Accounts Registry</h2>
-    <p style={{ color: '#64748b' }}>Search logs, system records, and directory details here.</p>
-  </div>
-);
+  const handleAdminLogout = async () => {
+    try {
+      await logout();
+      navigate('/scan'); // Cleanly dumps the admin terminal back onto the public self-scan desk
+    } catch (error) {
+      console.error("Logout failed:", error);
+      navigate('/scan'); 
+    }
+  };
 
-const AnalyticsMock = () => (
-  <div style={cardStyle}>
-    <h2 style={{ color: '#1e293b', marginBottom: '8px' }}>Analytical Graph Models</h2>
-    <p style={{ color: '#64748b' }}>Hourly traffic calculations and reports populate here.</p>
-  </div>
-);
-
-const cardStyle = { backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
+  return <AdminLayout onLogout={handleAdminLogout} />;
+};
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          {/* =========================================================
+              🔓 PUBLIC CHANNELS (No authentication credentials needed)
+             ========================================================= */}
+          
+          {/* 1. Public Self-Scanning Desk Kiosk */}
+          <Route path="/scan" element={<PublicKioskLayout />} />
+          
+          {/* 2. Admin Portal Login Gate */}
           <Route path="/login" element={<Login />} />
 
+
+          {/* =========================================================
+              🔒 PROTECTED CHANNELS (Restricted Admin Console)
+             ========================================================= */}
           <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<DashboardMock />} />
-              {/* Linked the live ScanDesk module route right here */}
-              <Route path="/scan" element={<ScanDesk />} />
-              <Route path="/users" element={<UsersMock />} />
-              <Route path="/analytics" element={<AnalyticsMock />} />
+            <Route element={<AdminLayoutWrapper />}>
+              {/* Main Admin Dashboard Landing Overview */}
+              <Route path="/dashboard" element={<DashboardHome />} />
+              
+              {/* Student Directory Management Workspace */}
+              <Route path="/users" element={<UserRegistry />} />
+              
+              {/* Metrics & Hourly Traffic Calculations Console */}
+              <Route path="/analytics" element={<AnalyticsPanels />} />
+              
+              {/* Optional: Admin can also view the scanning panel inside the layout */}
+              <Route path="/admin-scan" element={<ScanDesk />} />
             </Route>
           </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+          {/* =========================================================
+              🔀 SYSTEM ROUTING FALLBACK
+             ========================================================= */}
+          {/* Default entry fallback routes directly to the public scan terminal */}
+          <Route path="*" element={<Navigate to="/scan" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
