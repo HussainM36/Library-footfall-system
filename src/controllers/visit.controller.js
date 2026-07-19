@@ -17,9 +17,21 @@ export const logCheckIn = async (req, res, next) => {
 export const logCheckOut = async (req, res, next) => {
   try {
     const { membership_no } = req.body;
-    await VisitService.checkOut(membership_no);
     
-    return sendSuccess(res, 'Check-out recorded successfully.', null, HTTP_STATUS.OK);
+    // 1. Capture the return value of your checkOut service layer method
+    const result = await VisitService.checkOut(membership_no);
+    
+    // 2. Extract the user details safely from the result payload
+    // (If your VisitService returns the user object directly, use: result)
+    // (If it returns a wrapped object like checkIn does, use: result.user)
+    const studentProfile = result?.user || result;
+    
+    return sendSuccess(
+      res, 
+      'Check-out recorded successfully.', 
+      { user: studentProfile }, 
+      HTTP_STATUS.OK
+    );
   } catch (error) {
     next(error);
   }

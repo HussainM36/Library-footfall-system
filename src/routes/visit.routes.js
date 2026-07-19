@@ -7,7 +7,7 @@ import { protect } from '../middleware/auth.middleware.js';
 const router = Router();
 
 // Protect all visitor logging endpoints
-router.use(protect);
+//router.use(protect);
 
 router.post('/check-in', validateCheckIn, logCheckIn);
 router.post('/check-out', validateCheckOut, logCheckOut);
