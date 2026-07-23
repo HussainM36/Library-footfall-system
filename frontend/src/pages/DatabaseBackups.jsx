@@ -9,18 +9,18 @@ import {
   CheckCircle, 
   AlertTriangle 
 } from 'lucide-react';
-import api from '../api/axios'; // Adjust path if needed
+import api from '../api/axios'; // adjust path as needed for your project
 
-export const BackupConsole = () => {
+export const DatabaseBackups = () => {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
-
+  
   const fileInputRef = useRef(null);
 
-  // Fetch list of available backups
+  // Fetch available backups list from backend
   const fetchBackups = async () => {
     setLoading(true);
     try {
@@ -28,7 +28,7 @@ export const BackupConsole = () => {
       setBackups(response.data.backups || []);
     } catch (err) {
       console.error("Error fetching backups:", err);
-      showStatus('error', 'Failed to fetch backup files from server.');
+      showStatus('error', 'Failed to load backup files from server.');
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export const BackupConsole = () => {
     setTimeout(() => setStatusMsg({ type: '', text: '' }), 6000);
   };
 
-  // 1. CREATE SNAPSHOT BACKUP
+  // 1. CREATE SNAPSHOT
   const handleCreateSnapshot = async () => {
     setCreating(true);
     try {
@@ -52,37 +52,37 @@ export const BackupConsole = () => {
       fetchBackups();
     } catch (err) {
       console.error("Backup Creation Error:", err);
-      showStatus('error', err.response?.data?.message || 'Failed to generate backup.');
+      showStatus('error', err.response?.data?.message || 'Failed to create snapshot.');
     } finally {
       setCreating(false);
     }
   };
 
-  // 2. DOWNLOAD SQL FILE DIRECTLY (Using Blob payload)
+  // 2. DOWNLOAD SQL FILE (Blob URL trigger prevents Hash Routing bug)
   const handleDownload = async (filename) => {
     try {
       const response = await api.get(`/backups/download/${filename}`, {
         responseType: 'blob'
       });
 
-      // Create an invisible anchor tag to trigger real browser file save
-      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      // Create downloadable link in browser memory
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = url;
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download Error:", err);
-      showStatus('error', 'Failed to download SQL file.');
+      showStatus('error', 'Failed to download the .sql backup file.');
     }
   };
 
-  // 3. RESTORE FROM SERVER SNAPSHOT
+  // 3. RESTORE FROM EXISTING SNAPSHOT FILE
   const handleRestoreExisting = async (filename) => {
-    if (!window.confirm(`CRITICAL WARNING: Restoring '${filename}' will overwrite all database tables. Proceed?`)) {
+    if (!window.confirm(`WARNING: Restoring '${filename}' will overwrite all current database tables. Continue?`)) {
       return;
     }
 
@@ -92,13 +92,13 @@ export const BackupConsole = () => {
       showStatus('success', response.data.message || 'Database restored successfully!');
     } catch (err) {
       console.error("Restore Error:", err);
-      showStatus('error', err.response?.data?.message || 'Failed to restore database.');
+      showStatus('error', err.response?.data?.message || 'Database restoration failed.');
     } finally {
       setRestoring(false);
     }
   };
 
-  // 4. IMPORT LOCAL .SQL FILE & RESTORE
+  // 4. IMPORT & RESTORE FROM LOCAL COMPUTER (.SQL FILE)
   const handleFileUploadAndRestore = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -108,7 +108,7 @@ export const BackupConsole = () => {
       return;
     }
 
-    if (!window.confirm(`CRITICAL WARNING: Importing '${file.name}' will overwrite your active database. Proceed?`)) {
+    if (!window.confirm(`WARNING: Importing '${file.name}' will overwrite your active database. Proceed?`)) {
       event.target.value = '';
       return;
     }
@@ -142,7 +142,8 @@ export const BackupConsole = () => {
             Generate cold structural database transaction image logs (`.sql`) to secure account logs against unexpected system dropouts.
           </p>
         </div>
-
+        
+        {/* Status Alert Banner */}
         {statusMsg.text && (
           <div style={{
             ...styles.alert,
@@ -156,16 +157,16 @@ export const BackupConsole = () => {
         )}
       </div>
 
-      {/* ACTION PANELS */}
+      {/* ACTION PANEL */}
       <div style={styles.actionGrid}>
-        {/* CREATE SNAPSHOT */}
+        {/* CREATE SNAPSHOT CARD */}
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <Database size={22} color="#0052cc" />
             <h3 style={styles.cardTitle}>Create New Snapshot</h3>
           </div>
           <p style={styles.cardDesc}>
-            Save a current `.sql` dump of all database tables.
+            Back up all library tables into a downloadable `.sql` checkpoint.
           </p>
           <button 
             onClick={handleCreateSnapshot} 
@@ -177,14 +178,14 @@ export const BackupConsole = () => {
           </button>
         </div>
 
-        {/* IMPORT BACKUP */}
+        {/* IMPORT & RESTORE CARD */}
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <Upload size={22} color="#ea580c" />
             <h3 style={styles.cardTitle}>Import & Restore Backup</h3>
           </div>
           <p style={styles.cardDesc}>
-            Upload a local `.sql` file to recover your database after a system crash.
+            Upload a saved `.sql` file from your system to restore database state after a crash.
           </p>
           <input 
             type="file" 

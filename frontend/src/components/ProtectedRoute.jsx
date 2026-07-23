@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export const ProtectedRoute = () => {
   const { admin, loading } = useAuth();
 
-  // Clean CSS loading indicator spinner
+  // 1. Clean CSS loading indicator spinner
   if (loading) {
     return (
       <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa' }}>
@@ -23,6 +23,10 @@ export const ProtectedRoute = () => {
     );
   }
 
-  // Redirect to login if user isn't authenticated
-  return admin ? <Outlet /> : <Navigate to="/login" replace />;
+  // 2. Check if admin session exists in React state OR in localStorage
+  const hasToken = localStorage.getItem('adminToken');
+  const isAuthenticated = Boolean(admin || hasToken);
+
+  // 3. Render restricted routes if authenticated, otherwise bounce to /login
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };

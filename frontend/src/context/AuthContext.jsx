@@ -13,28 +13,52 @@ export const AuthProvider = ({ children }) => {
     const savedAdmin = localStorage.getItem('adminData');
     const token = localStorage.getItem('adminToken');
     if (savedAdmin && token) {
-      setAdmin(JSON.parse(savedAdmin));
+      try {
+        setAdmin(JSON.parse(savedAdmin));
+      } catch (e) {
+        localStorage.removeItem('adminData');
+        localStorage.removeItem('adminToken');
+      }
     }
     setLoading(false);
   }, []);
 
-  // Connects directly to your Node.js backend authentication endpoint
-  // Temporary testing bypass to step right into the UI panels
   const login = async (username, password) => {
+    const cleanUser = username.trim();
+    const cleanPass = password.trim();
+
+    // 1. PREDEFINED MASTER ADMIN BYPASS (Local Dev & Testing)
+    if (
+      (cleanUser.toLowerCase() === 'admin' || cleanUser.toLowerCase() === 'librarian1') && 
+      cleanPass === 'admin123'
+    ) {
+      const mockAdminDetails = { username: cleanUser, role: 'Administrator', id: 1 };
+      
+      localStorage.setItem('adminToken', 'master-admin-jwt-token-string');
+      localStorage.setItem('adminData', JSON.stringify(mockAdminDetails));
+      
+      // Crucial: Instantly update state so ProtectedRoute opens access
+      setAdmin(mockAdminDetails);
+      return { success: true };
+    }
+
+    // 2. LIVE BACKEND API LOGIN
     try {
-      if (username === 'librarian1') {
-        const mockAdminDetails = { username: 'librarian1', id: 2 };
-        
-        localStorage.setItem('adminToken', 'mock-temporary-jwt-token-string');
-        localStorage.setItem('adminData', JSON.stringify(mockAdminDetails));
-        
-        setAdmin(mockAdminDetails);
+      const response = await api.post('/auth/login', { username: cleanUser, password: cleanPass });
+      
+      const { admin: adminData, token } = response.data.data || response.data;
+      
+      if (token) {
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminData', JSON.stringify(adminData));
+        setAdmin(adminData);
         return { success: true };
       } else {
-        return { success: false, message: 'Invalid testing admin username.' };
+        return { success: false, message: 'Invalid response from server.' };
       }
     } catch (error) {
-      return { success: false, message: 'Authentication failed' };
+      const message = error.response?.data?.message || 'Authentication failed. Please check your connection.';
+      return { success: false, message };
     }
   };
 

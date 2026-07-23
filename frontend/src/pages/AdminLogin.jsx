@@ -9,11 +9,17 @@ export const AdminLogin = ({ onLoginSuccess, onBackToScan }) => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Replace with your real API auth logic if needed
-    if (username === 'librarian1' && password === 'admin123') {
+    setError('');
+
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    // Accepts both predefined admin testing profiles
+    if ((cleanUser === 'admin' || cleanUser === 'librarian1') && cleanPass === 'admin123') {
+      localStorage.setItem('token', 'master_admin_dev_token_999');
       onLoginSuccess();
     } else {
-      setError('Invalid administrative credentials.');
+      setError('Invalid administrative credentials. Use admin / admin123');
     }
   };
 
@@ -36,7 +42,7 @@ export const AdminLogin = ({ onLoginSuccess, onBackToScan }) => {
               value={username} 
               onChange={(e) => setUsername(e.target.value)}
               style={styles.input}
-              placeholder="e.g., librarian1"
+              placeholder="e.g., admin or librarian1"
               required
             />
           </div>
